@@ -1,0 +1,53 @@
+# ---- Vivado / Vitis generated output (rebuildable from the project + scripts) ----
+*.cache/
+*.gen/
+*.hw/
+*.ip_user_files/
+*.sim/
+*.runs/
+*.jou
+*.log
+*.str
+*.backup.jou
+*.backup.log
+.Xil/
+.vivado/
+hs_err_pid*.log
+webtalk*.jou
+webtalk*.log
+vivado*.backup.*
+vivado_pid*.str
+
+# Build products (regenerate; attach to a release if you want to share them)
+*.bit
+*.bin
+*.ltx
+*.dcp
+*.xsa
+*.mmi
+
+# Block design layout cache (regenerated on open)
+*.srcs/**/bd/*/ui/
+
+# Vitis workspace / IDE state
+.metadata/
+.analytics
+.lock
+.sdk/
+.vitis/
+*/_ide/
+*/export/
+*/logs/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
