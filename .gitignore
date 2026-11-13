@@ -27,7 +27,7 @@ vivado_pid*.str
 *.mmi
 
 # Block design layout cache (regenerated on open)
-*.srcs/**/bd/*/ui/
+**/bd/*/ui/
 
 # Vitis workspace / IDE state
 .metadata/
