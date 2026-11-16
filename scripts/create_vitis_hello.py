@@ -1,4 +1,4 @@
-"""Create the Vitis platform + hello app for the Nexys A7-100T MicroBlaze system and build both.
+r"""Create the Vitis platform + hello app for the Nexys A7-100T MicroBlaze system and build both.
 
 Run from cmd.exe. Vivado's settings must be loaded too, because Vitis calls Vivado's
 sdtgen to turn the .xsa into a system device tree (without it: "Error in generating SDT"):
@@ -6,28 +6,35 @@ sdtgen to turn the .xsa into a system device tree (without it: "Error in generat
     call C:\AMDDesignTools\2025.2\Vitis\settings64.bat
     vitis -s C:\Users\daniel.whent\workspace\machine-vision\scripts\create_vitis_hello.py
 
-Workspace defaults to C:/tmp/fpga-mv-ws (override with env VITIS_WS). ELF: <workspace>/hello/build/hello.elf
+Select the program with env APP (default hello) and APP_DIR (software/<APP_DIR>/src, default = APP);
+e.g. set APP=ddr2_test before running. Workspace defaults to C:/tmp/fpga-mv-ws (override with env VITIS_WS). ELF: <workspace>/hello/build/hello.elf
 
 Needs hw_export/system_wrapper.xsa (made by scripts/export_xsa.tcl in Vivado).
 Modeled on <Vitis>/cli/examples/embedded/platform_uc5_MB.py.
 """
 import os
 import shutil
+import stat
 import vitis
 
 repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 xsa = os.path.join(repo, "hw_export", "system_wrapper.xsa")
 workspace = os.path.normpath(os.environ.get("VITIS_WS", "C:/tmp/fpga-mv-ws"))
-app_src_dir = os.path.join(repo, "software", "hello", "src")
+APP = os.environ.get("APP", "hello")
+app_src_dir = os.path.join(repo, "software", os.environ.get("APP_DIR", APP), "src")
 
 PLATFORM = "nexys_platform"
-APP = "hello"
 
 if not os.path.isfile(xsa):
     raise SystemExit(f"Missing {xsa}. Run scripts/export_xsa.tcl in Vivado first.")
 
+def _make_writable_and_retry(func, path, _exc):
+    # Vitis leaves some generated files read-only; Windows refuses to delete them otherwise.
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
+
 if os.path.isdir(workspace):
-    shutil.rmtree(workspace)
+    shutil.rmtree(workspace, onexc=_make_writable_and_retry)
 
 client = vitis.create_client()
 client.set_workspace(workspace)
