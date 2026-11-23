@@ -18,7 +18,7 @@ import stat
 import vitis
 
 repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-xsa = os.path.join(repo, "hw_export", "system_wrapper.xsa")
+xsa = os.environ.get("XSA") or os.path.join(repo, "hw_export", "system_wrapper.xsa")
 workspace = os.path.normpath(os.environ.get("VITIS_WS", "C:/tmp/fpga-mv-ws"))
 APP = os.environ.get("APP", "hello")
 app_src_dir = os.path.join(repo, "software", os.environ.get("APP_DIR", APP), "src")
