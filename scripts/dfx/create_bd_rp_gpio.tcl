@@ -27,6 +27,15 @@ apply_bd_automation -rule xilinx.com:bd_rule:axi4 -config [list \
     master_apm  0 \
 ] [get_bd_intf_pins axi_gpio_rp/S_AXI]
 
+# AXI HWICAP: lets MicroBlaze write partial bitstreams into the internal ICAPE2 (7 series, 32-bit ICAP, 100 MHz).
+set hw [create_bd_cell -type ip -vlnv xilinx.com:ip:axi_hwicap axi_hwicap_0]
+set_property CONFIG.C_ICAP_EXTERNAL 0 $hw
+apply_bd_automation -rule xilinx.com:bd_rule:axi4 -config [list     Clk_master  /clk_wiz_0/clk_out1     Clk_slave   /clk_wiz_0/clk_out1     Clk_xbar    /clk_wiz_0/clk_out1     Master      {/microblaze_0 (Periph)}     Slave       /axi_hwicap_0/S_AXI_LITE     ddr_seg     Auto     intc_ip     /axi_smc     master_apm  0 ] [get_bd_intf_pins axi_hwicap_0/S_AXI_LITE]
+connect_bd_net [get_bd_pins clk_wiz_0/clk_out1] [get_bd_pins axi_hwicap_0/icap_clk]
+set hw_eos [create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant const_eos]
+set_property -dict [list CONFIG.CONST_VAL 1 CONFIG.CONST_WIDTH 1] $hw_eos
+connect_bd_net [get_bd_pins const_eos/dout] [get_bd_pins axi_hwicap_0/eos_in]
+
 create_bd_port -dir O -from 31 -to 0 rp_din
 connect_bd_net [get_bd_pins axi_gpio_rp/gpio_io_o] [get_bd_ports rp_din]
 create_bd_port -dir I -from 31 -to 0 rp_dout
