@@ -5,7 +5,7 @@
     "cell_name": "mig_7series_0",
     "component_reference": "xilinx.com:ip:mig_7series:4.2",
     "ip_revision": "2",
-    "gen_directory": "../../../../../../fpga-ml-nexys-a7-100T.gen/sources_1/bd/system/ip/system_mig_7series_0_0",
+    "gen_directory": "../../../../../../fpga-ml-nexys-a7-100T.gen/sources_1/bd/system/ip/system_mig_7series_0_0_2",
     "parameters": {
       "component_parameters": {
         "XML_INPUT_FILE": [ { "value": "../../../../../../../ip/mig_nexys_a7_nobuf.prj", "value_src": "user", "resolve_type": "user", "usage": "all" } ],
@@ -1180,7 +1180,7 @@
         "IPCONTEXT": [ { "value": "IP_Integrator" } ],
         "IPREVISION": [ { "value": "2" } ],
         "MANAGED": [ { "value": "TRUE" } ],
-        "OUTPUTDIR": [ { "value": "../../../../../../fpga-ml-nexys-a7-100T.gen/sources_1/bd/system/ip/system_mig_7series_0_0" } ],
+        "OUTPUTDIR": [ { "value": "../../../../../../fpga-ml-nexys-a7-100T.gen/sources_1/bd/system/ip/system_mig_7series_0_0_2" } ],
         "SELECTEDSIMMODEL": [ { "value": "" } ],
         "SHAREDDIR": [ { "value": "../../ipshared" } ],
         "SWVERSION": [ { "value": "2025.2" } ],
@@ -1681,5 +1681,5 @@
       }
     }
   },
-  "checksum": "7919d35c"
+  "checksum": "6615146b"
 }

@@ -5,7 +5,7 @@
     "cell_name": "microblaze_0_local_memory/dlmb_bram_if_cntlr",
     "component_reference": "xilinx.com:ip:lmb_bram_if_cntlr:4.0",
     "ip_revision": "27",
-    "gen_directory": "../../../../../../fpga-ml-nexys-a7-100T.gen/sources_1/bd/system/ip/system_dlmb_bram_if_cntlr_0",
+    "gen_directory": "../../../../../../fpga-ml-nexys-a7-100T.gen/sources_1/bd/system/ip/system_dlmb_bram_if_cntlr_0_2",
     "parameters": {
       "component_parameters": {
         "C_BASEADDR": [ { "value": "0x0000000000000000", "value_src": "propagated", "value_permission": "bd", "resolve_type": "user", "format": "bitString", "usage": "all" } ],
@@ -105,7 +105,7 @@
         "IPCONTEXT": [ { "value": "IP_Integrator" } ],
         "IPREVISION": [ { "value": "27" } ],
         "MANAGED": [ { "value": "TRUE" } ],
-        "OUTPUTDIR": [ { "value": "../../../../../../fpga-ml-nexys-a7-100T.gen/sources_1/bd/system/ip/system_dlmb_bram_if_cntlr_0" } ],
+        "OUTPUTDIR": [ { "value": "../../../../../../fpga-ml-nexys-a7-100T.gen/sources_1/bd/system/ip/system_dlmb_bram_if_cntlr_0_2" } ],
         "SELECTEDSIMMODEL": [ { "value": "" } ],
         "SHAREDDIR": [ { "value": "../../ipshared" } ],
         "SWVERSION": [ { "value": "2025.2" } ],
@@ -173,7 +173,7 @@
             "MEM_ECC": [ { "value": "NONE", "value_src": "propagated", "value_permission": "bd", "resolve_type": "generated", "is_ips_inferred": true, "is_static_object": false } ],
             "READ_WRITE_MODE": [ { "value": "", "value_permission": "bd", "resolve_type": "generated", "is_ips_inferred": true, "is_static_object": false } ],
             "READ_LATENCY": [ { "value": "1", "value_permission": "bd", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
-            "MEM_ADDRESS_MODE": [ { "value": "", "value_src": "weak", "value_permission": "bd", "resolve_type": "generated", "is_ips_inferred": true, "is_static_object": false } ]
+            "MEM_ADDRESS_MODE": [ { "value": "", "value_src": "weak", "resolve_type": "generated", "is_ips_inferred": true, "is_static_object": false } ]
           },
           "port_maps": {
             "ADDR": [ { "physical_name": "BRAM_Addr_A" } ],
@@ -378,5 +378,5 @@
       }
     }
   },
-  "checksum": "fc11391b"
+  "checksum": "d08cf748"
 }

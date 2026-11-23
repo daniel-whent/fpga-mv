@@ -1,7 +1,7 @@
 {
   "design": {
     "design_info": {
-      "boundary_crc": "0xD2559E6966138855",
+      "boundary_crc": "0xD2559E69D285D653",
       "device": "xc7a100tcsg324-1",
       "gen_directory": "../../../../fpga-ml-nexys-a7-100T.gen/sources_1/bd/system",
       "name": "system",
@@ -34,9 +34,14 @@
       "v_tc_0": "",
       "v_axi4s_vid_out_0": "",
       "const_one": "",
+      "vga_active4": "",
       "vga_r_slice": "",
+      "vga_r_blank": "",
       "vga_g_slice": "",
-      "vga_b_slice": ""
+      "vga_g_blank": "",
+      "vga_b_slice": "",
+      "vga_b_blank": "",
+      "system_ila_0": ""
     },
     "interface_ports": {
       "usb_uart": {
@@ -262,17 +267,47 @@
       "vga_r": {
         "direction": "O",
         "left": "3",
-        "right": "0"
+        "right": "0",
+        "parameters": {
+          "PortType": {
+            "value": "undef",
+            "value_src": "ip_prop"
+          },
+          "PortType.PROP_SRC": {
+            "value": "false",
+            "value_src": "ip_prop"
+          }
+        }
       },
       "vga_g": {
         "direction": "O",
         "left": "3",
-        "right": "0"
+        "right": "0",
+        "parameters": {
+          "PortType": {
+            "value": "undef",
+            "value_src": "ip_prop"
+          },
+          "PortType.PROP_SRC": {
+            "value": "false",
+            "value_src": "ip_prop"
+          }
+        }
       },
       "vga_b": {
         "direction": "O",
         "left": "3",
-        "right": "0"
+        "right": "0",
+        "parameters": {
+          "PortType": {
+            "value": "undef",
+            "value_src": "ip_prop"
+          },
+          "PortType.PROP_SRC": {
+            "value": "false",
+            "value_src": "ip_prop"
+          }
+        }
       },
       "vga_hs": {
         "direction": "O"
@@ -998,7 +1033,7 @@
             "value": "1"
           },
           "C_GPIO2_WIDTH": {
-            "value": "2"
+            "value": "5"
           },
           "C_IS_DUAL": {
             "value": "1"
@@ -1026,7 +1061,7 @@
             "value": "1"
           },
           "NUM_PORTS": {
-            "value": "2"
+            "value": "5"
           }
         }
       },
@@ -1188,6 +1223,19 @@
           }
         }
       },
+      "vga_active4": {
+        "vlnv": "xilinx.com:ip:xlconcat:2.1",
+        "ip_revision": "7",
+        "xci_name": "system_vga_active4_0",
+        "xci_path": "ip\\system_vga_active4_0\\system_vga_active4_0.xci",
+        "inst_hier_path": "vga_active4",
+        "has_run_ip_tcl": "true",
+        "parameters": {
+          "NUM_PORTS": {
+            "value": "4"
+          }
+        }
+      },
       "vga_r_slice": {
         "vlnv": "xilinx.com:ip:xlslice:1.0",
         "ip_revision": "5",
@@ -1206,6 +1254,22 @@
             "value": "24"
           },
           "DOUT_WIDTH": {
+            "value": "4"
+          }
+        }
+      },
+      "vga_r_blank": {
+        "vlnv": "xilinx.com:ip:util_vector_logic:2.0",
+        "ip_revision": "5",
+        "xci_name": "system_vga_r_blank_0",
+        "xci_path": "ip\\system_vga_r_blank_0\\system_vga_r_blank_0.xci",
+        "inst_hier_path": "vga_r_blank",
+        "has_run_ip_tcl": "true",
+        "parameters": {
+          "C_OPERATION": {
+            "value": "and"
+          },
+          "C_SIZE": {
             "value": "4"
           }
         }
@@ -1232,6 +1296,22 @@
           }
         }
       },
+      "vga_g_blank": {
+        "vlnv": "xilinx.com:ip:util_vector_logic:2.0",
+        "ip_revision": "5",
+        "xci_name": "system_vga_g_blank_0",
+        "xci_path": "ip\\system_vga_g_blank_0\\system_vga_g_blank_0.xci",
+        "inst_hier_path": "vga_g_blank",
+        "has_run_ip_tcl": "true",
+        "parameters": {
+          "C_OPERATION": {
+            "value": "and"
+          },
+          "C_SIZE": {
+            "value": "4"
+          }
+        }
+      },
       "vga_b_slice": {
         "vlnv": "xilinx.com:ip:xlslice:1.0",
         "ip_revision": "5",
@@ -1251,6 +1331,58 @@
           },
           "DOUT_WIDTH": {
             "value": "4"
+          }
+        }
+      },
+      "vga_b_blank": {
+        "vlnv": "xilinx.com:ip:util_vector_logic:2.0",
+        "ip_revision": "5",
+        "xci_name": "system_vga_b_blank_0",
+        "xci_path": "ip\\system_vga_b_blank_0\\system_vga_b_blank_0.xci",
+        "inst_hier_path": "vga_b_blank",
+        "has_run_ip_tcl": "true",
+        "parameters": {
+          "C_OPERATION": {
+            "value": "and"
+          },
+          "C_SIZE": {
+            "value": "4"
+          }
+        }
+      },
+      "system_ila_0": {
+        "vlnv": "xilinx.com:ip:system_ila:1.1",
+        "ip_revision": "22",
+        "xci_name": "system_system_ila_0_0",
+        "xci_path": "ip\\system_system_ila_0_0\\system_system_ila_0_0.xci",
+        "inst_hier_path": "system_ila_0",
+        "has_run_ip_tcl": "true",
+        "parameters": {
+          "C_MON_TYPE": {
+            "value": "INTERFACE"
+          },
+          "C_NUM_MONITOR_SLOTS": {
+            "value": "1"
+          },
+          "C_SLOT_0_APC_EN": {
+            "value": "0"
+          },
+          "C_SLOT_0_AXI_DATA_SEL": {
+            "value": "1"
+          },
+          "C_SLOT_0_AXI_TRIG_SEL": {
+            "value": "1"
+          },
+          "C_SLOT_0_INTF_TYPE": {
+            "value": "xilinx.com:interface:axis_rtl:1.0"
+          }
+        },
+        "interface_ports": {
+          "SLOT_0_AXIS": {
+            "mode": "Monitor",
+            "monitor_type": "SlaveType",
+            "vlnv_bus_definition": "xilinx.com:interface:axis:1.0",
+            "vlnv": "xilinx.com:interface:axis_rtl:1.0"
           }
         }
       }
@@ -1295,8 +1427,17 @@
       "axi_vdma_0_M_AXIS_MM2S": {
         "interface_ports": [
           "axi_vdma_0/M_AXIS_MM2S",
-          "v_axi4s_vid_out_0/video_in"
-        ]
+          "v_axi4s_vid_out_0/video_in",
+          "system_ila_0/SLOT_0_AXIS"
+        ],
+        "hdl_attributes": {
+          "DEBUG": {
+            "value": "true"
+          },
+          "MARK_DEBUG": {
+            "value": "true"
+          }
+        }
       },
       "axi_vdma_0_M_AXI_MM2S": {
         "interface_ports": [
@@ -1354,7 +1495,8 @@
           "rst_pix/slowest_sync_clk",
           "axi_vdma_0/m_axis_mm2s_aclk",
           "v_axi4s_vid_out_0/aclk",
-          "v_tc_0/clk"
+          "v_tc_0/clk",
+          "system_ila_0/clk"
         ]
       },
       "clk_wiz_0_locked": {
@@ -1464,13 +1606,41 @@
         "ports": [
           "rst_pix/peripheral_aresetn",
           "v_axi4s_vid_out_0/aresetn",
-          "v_tc_0/resetn"
+          "v_tc_0/resetn",
+          "system_ila_0/resetn"
         ]
       },
       "sys_clock_1": {
         "ports": [
           "sys_clock",
           "clk_wiz_0/clk_in1"
+        ]
+      },
+      "v_axi4s_vid_out_0_locked": {
+        "ports": [
+          "v_axi4s_vid_out_0/locked",
+          "xlconcat_status/In2"
+        ]
+      },
+      "v_axi4s_vid_out_0_overflow": {
+        "ports": [
+          "v_axi4s_vid_out_0/overflow",
+          "xlconcat_status/In4"
+        ]
+      },
+      "v_axi4s_vid_out_0_underflow": {
+        "ports": [
+          "v_axi4s_vid_out_0/underflow",
+          "xlconcat_status/In3"
+        ]
+      },
+      "v_axi4s_vid_out_0_vid_active_video": {
+        "ports": [
+          "v_axi4s_vid_out_0/vid_active_video",
+          "vga_active4/In0",
+          "vga_active4/In1",
+          "vga_active4/In2",
+          "vga_active4/In3"
         ]
       },
       "v_axi4s_vid_out_0_vid_data": {
@@ -1499,22 +1669,48 @@
           "v_tc_0/gen_clken"
         ]
       },
+      "vga_active4_dout": {
+        "ports": [
+          "vga_active4/dout",
+          "vga_r_blank/Op2",
+          "vga_g_blank/Op2",
+          "vga_b_blank/Op2"
+        ]
+      },
+      "vga_b_blank_Res": {
+        "ports": [
+          "vga_b_blank/Res",
+          "vga_b"
+        ]
+      },
       "vga_b_slice_Dout": {
         "ports": [
           "vga_b_slice/Dout",
-          "vga_b"
+          "vga_b_blank/Op1"
+        ]
+      },
+      "vga_g_blank_Res": {
+        "ports": [
+          "vga_g_blank/Res",
+          "vga_g"
         ]
       },
       "vga_g_slice_Dout": {
         "ports": [
           "vga_g_slice/Dout",
-          "vga_g"
+          "vga_g_blank/Op1"
+        ]
+      },
+      "vga_r_blank_Res": {
+        "ports": [
+          "vga_r_blank/Res",
+          "vga_r"
         ]
       },
       "vga_r_slice_Dout": {
         "ports": [
           "vga_r_slice/Dout",
-          "vga_r"
+          "vga_r_blank/Op1"
         ]
       },
       "xlconcat_status_dout": {

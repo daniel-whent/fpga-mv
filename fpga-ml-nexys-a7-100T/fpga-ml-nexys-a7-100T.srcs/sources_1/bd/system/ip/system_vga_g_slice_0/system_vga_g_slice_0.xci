@@ -5,7 +5,7 @@
     "cell_name": "vga_g_slice",
     "component_reference": "xilinx.com:ip:xlslice:1.0",
     "ip_revision": "5",
-    "gen_directory": "../../../../../../fpga-ml-nexys-a7-100T.gen/sources_1/bd/system/ip/system_vga_g_slice_0",
+    "gen_directory": "../../../../../../fpga-ml-nexys-a7-100T.gen/sources_1/bd/system/ip/system_vga_g_slice_0_2",
     "parameters": {
       "component_parameters": {
         "Component_Name": [ { "value": "system_vga_g_slice_0", "resolve_type": "user", "usage": "all" } ],
@@ -36,7 +36,7 @@
         "IPCONTEXT": [ { "value": "IP_Integrator" } ],
         "IPREVISION": [ { "value": "5" } ],
         "MANAGED": [ { "value": "TRUE" } ],
-        "OUTPUTDIR": [ { "value": "../../../../../../fpga-ml-nexys-a7-100T.gen/sources_1/bd/system/ip/system_vga_g_slice_0" } ],
+        "OUTPUTDIR": [ { "value": "../../../../../../fpga-ml-nexys-a7-100T.gen/sources_1/bd/system/ip/system_vga_g_slice_0_2" } ],
         "SELECTEDSIMMODEL": [ { "value": "" } ],
         "SHAREDDIR": [ { "value": "../../ipshared" } ],
         "SWVERSION": [ { "value": "2025.2" } ],
@@ -50,5 +50,5 @@
       }
     }
   },
-  "checksum": "a1052b20"
+  "checksum": "8e79b867"
 }
