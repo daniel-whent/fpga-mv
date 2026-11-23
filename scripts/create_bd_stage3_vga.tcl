@@ -123,13 +123,25 @@ if {[llength [get_bd_pins -quiet v_axi4s_vid_out_0/vid_io_out_ce]] > 0} {
 # ---------------------------------------------------------------- VGA pins: top 4 bits of each color
 # vid_data: [23:16]=R, [15:8]=B, [7:0]=G
 array set slice {r {23 20} b {15 12} g {7 4}}
+# v_axi4s_vid_out does NOT zero vid_data outside the active area (its RTL only updates the data register
+# while reading the FIFO, so blanking carries the last pixel of the line). An analog VGA monitor needs
+# 0 V during blanking (it clamps black level there), so gate every color bit with vid_active_video.
+set act4 [create_bd_cell -type ip -vlnv xilinx.com:ip:xlconcat vga_active4]
+set_property CONFIG.NUM_PORTS 4 $act4
+foreach i {0 1 2 3} {
+    connect_bd_net [get_bd_pins v_axi4s_vid_out_0/vid_active_video] [get_bd_pins vga_active4/In$i]
+}
 foreach c {r g b} {
     lassign $slice($c) hi lo
     set s [create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice vga_${c}_slice]
     set_property -dict [list CONFIG.DIN_WIDTH 24 CONFIG.DIN_FROM $hi CONFIG.DIN_TO $lo CONFIG.DOUT_WIDTH 4] $s
     connect_bd_net [get_bd_pins v_axi4s_vid_out_0/vid_data] [get_bd_pins vga_${c}_slice/Din]
+    set a [create_bd_cell -type ip -vlnv xilinx.com:ip:util_vector_logic vga_${c}_blank]
+    set_property -dict [list CONFIG.C_SIZE 4 CONFIG.C_OPERATION and] $a
+    connect_bd_net [get_bd_pins vga_${c}_slice/Dout] [get_bd_pins vga_${c}_blank/Op1]
+    connect_bd_net [get_bd_pins vga_active4/dout]    [get_bd_pins vga_${c}_blank/Op2]
     create_bd_port -dir O -from 3 -to 0 vga_$c
-    connect_bd_net [get_bd_pins vga_${c}_slice/Dout] [get_bd_ports vga_$c]
+    connect_bd_net [get_bd_pins vga_${c}_blank/Res] [get_bd_ports vga_$c]
 }
 create_bd_port -dir O vga_hs
 create_bd_port -dir O vga_vs
