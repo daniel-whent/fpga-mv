@@ -40,8 +40,9 @@ Fast frame input over the same micro-USB cable (FTDI UART bridge) at 4 Mbaud int
 AXI DMA S2MM -> DDR2 framebuffer. Block design: `scripts/create_bd_stage4_usb.tcl` (validates; GPIO ctrl/status at 0x40010000,
 DMA at 0x41E00000). Board program `software/usb_frame` ('F' + 3-byte length arms the DMA, PC streams at 4 Mbaud).
 PC sender `tools/send_frame.py` (needs `pip install pyserial pillow numpy`).
-A scratch build (`scripts/create_usb_project.tcl`, run with `-tclargs build`, project in C:/tmp/usb) was started but its result
-is unknown; rebuild with `scripts/build_all.tcl` in the main project (now includes Stage 4) or the scratch script.
+A scratch build of Stages 1-4 (`scripts/create_usb_project.tcl`, run with `-tclargs build`, project in C:/tmp/usb) completed:
+bitstream generated, WNS +1.313 ns, and `software/usb_frame` compiles against its XSA. Not run on the board. The main project
+(`fpga-ml-nexys-a7-100T`) is still at Stage 3; rebuild with `scripts/build_all.tcl` (now includes Stage 4) or the scratch script.
 Next: build, program, `python tools/send_frame.py --port COM4 --pattern bars`, then a photo; measure throughput.
 Speed notes: 4 Mbaud (25 clocks/bit at 100 MHz) ~0.4 MB/s, full frame ~2.3 s. FT2232H UART goes up to 12 Mbaud per its
 datasheet; 10 Mbaud is 10 clocks/bit but whether the FTDI can generate it accurately is unverified (plan: measure the real
