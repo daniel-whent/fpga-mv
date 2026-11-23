@@ -29,10 +29,20 @@
 #ifndef DEC_BASE
 #define DEC_BASE 0x44A00000u      /* dfx_decoupler control register block (s_axi_reg) */
 #endif
+#ifndef ASM_BASE
+#define ASM_BASE 0x44A10000u      /* dfx_axi_shutdown_manager control register */
+#endif
 #ifndef RP_BASE
-#define RP_BASE  0x44A10000u      /* reconfigurable partition AXI4-Lite slave (through the decoupler) */
+#define RP_BASE  0x44A20000u      /* reconfigurable partition AXI4-Lite slave (through the decoupler) */
 #endif
 #define DEC_CTRL  (*(volatile uint32_t *)(DEC_BASE + 0x0))
+/* shutdown manager (xdfxasm_hw.h): write 1 = shutdown, 0 = pass-through. Read: bit0 requested,
+ * bit1 both channels in shutdown, bit2 write channel, bit3 read channel. */
+#define ASM_CTRL  (*(volatile uint32_t *)(ASM_BASE + 0x0))
+#ifndef RST_BASE
+#define RST_BASE 0x40010000u      /* axi_gpio_rst: bit0 = partition reset released (0 = in reset) */
+#endif
+#define RP_RST    (*(volatile uint32_t *)(RST_BASE + 0x0))
 #define RP_VALUE  (*(volatile uint32_t *)(RP_BASE + 0x0))
 #define RP_ID     (*(volatile uint32_t *)(RP_BASE + 0x4))
 #define UART_RX   (*(volatile uint32_t *)0x40600000u)
@@ -81,13 +91,30 @@ static void show(uint32_t v)
                (unsigned)v, (unsigned)RP_ID, (unsigned)RP_VALUE);
 }
 
-/* Swap modules: decouple the partition, push the partial bitstream, re-couple, restore the value. */
+static int asm_shutdown(void)
+{
+    ASM_CTRL = 1;
+    for (int i = 0; i < 100000; i++) {
+        if (ASM_CTRL & 0x2u) return 0;           /* both channels shut down */
+    }
+    xil_printf("shutdown manager did not reach shutdown, state 0x%x\r\n", (unsigned)ASM_CTRL);
+    return -1;
+}
+
+/* Swap modules: shut down the bus, decouple, push the partial bitstream, re-couple, resume, restore value. */
 static void swap_to(uint32_t addr)
 {
+    if (asm_shutdown() != 0) { ASM_CTRL = 0; return; }
     DEC_CTRL = 1;
-    xil_printf("decoupler control readback 0x%08x\r\n", (unsigned)DEC_CTRL);
     int rc = load_partial(addr);
+    /* A partial bitstream does not initialize the new module's flip-flops: pulse its local reset while it is
+     * still decoupled, then re-couple and resume traffic. */
+    RP_RST = 0;
+    usleep(10);
+    RP_RST = 1;
+    usleep(10);
     DEC_CTRL = 0;
+    ASM_CTRL = 0;
     if (rc == 0) show(last_value);
 }
 
@@ -97,7 +124,7 @@ int main(void)
     DEC_CTRL = 0;
     xil_printf("decoupler control 0x%08x\r\n", (unsigned)DEC_CTRL);
     show(0x12345678u);
-    xil_printf("Commands: a/b = swap to RM A/B (decoupled), 0 1 2 3 = values, i = id, d/e = decouple on/off\r\n");
+    xil_printf("Commands: a/b = swap to RM A/B (decoupled), 0 1 2 3 = values, i/r = read id, s = shutdown mgr on, p = pass-through, d/e = decouple on/off\r\n");
     for (;;) {
         if (!(UART_STAT & 1u)) continue;
         switch ((char)(UART_RX & 0xFF)) {
@@ -108,6 +135,11 @@ int main(void)
         case '2': show(0x01234567u); break;
         case '3': show(0x89ABCDEFu); break;
         case 'i': xil_printf("module id 0x%08x\r\n", (unsigned)RP_ID); break;
+        case 's': { int rc = asm_shutdown(); xil_printf("shutdown: %d, state 0x%x\r\n", rc, (unsigned)ASM_CTRL); break; }
+        case 'p': ASM_CTRL = 0; xil_printf("pass-through, state 0x%x\r\n", (unsigned)ASM_CTRL); break;
+        case 'r': xil_printf("read id: "); xil_printf("0x%08x\r\n", (unsigned)RP_ID); break;
+        case 'x': load_partial(RM_A_ADDR); break;   /* raw load, no shutdown/decouple (for diagnosis) */
+        case 'y': load_partial(RM_B_ADDR); break;
         case 'd': DEC_CTRL = 1; xil_printf("decoupled, control 0x%08x\r\n", (unsigned)DEC_CTRL); break;
         case 'e': DEC_CTRL = 0; xil_printf("coupled, control 0x%08x\r\n", (unsigned)DEC_CTRL); break;
         default: break;

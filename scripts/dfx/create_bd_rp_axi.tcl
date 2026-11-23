@@ -23,7 +23,15 @@ set_property CONFIG.NUM_MI [expr {$n+1}] $smc
 set mi [format "M%02d_AXI" $n]
 create_bd_intf_port -mode Master -vlnv xilinx.com:interface:aximm_rtl:1.0 rp_axi
 set_property -dict [list CONFIG.PROTOCOL AXI4LITE CONFIG.ADDR_WIDTH 32 CONFIG.DATA_WIDTH 32] [get_bd_intf_ports rp_axi]
-connect_bd_intf_net [get_bd_intf_pins axi_smc/$mi] [get_bd_intf_pins axi_dec/s_intf_0]
+# AXI shutdown manager: while shut down it answers bus transactions itself instead of letting them hang on a
+# decoupled / half-configured partition. Chain: SmartConnect -> axi_asm -> decoupler -> rp_axi.
+set asm [create_bd_cell -type ip -vlnv xilinx.com:ip:dfx_axi_shutdown_manager axi_asm]
+set_property -dict [list CONFIG.DP_PROTOCOL AXI4LITE CONFIG.DP_AXI_ADDR_WIDTH 32 CONFIG.DP_AXI_DATA_WIDTH 32     CONFIG.CTRL_INTERFACE_TYPE 1 CONFIG.RP_IS_MASTER false] $asm
+connect_bd_intf_net [get_bd_intf_pins axi_smc/$mi] [get_bd_intf_pins axi_asm/S_AXI]
+connect_bd_intf_net [get_bd_intf_pins axi_asm/M_AXI] [get_bd_intf_pins axi_dec/s_intf_0]
+connect_bd_net [get_bd_pins clk_wiz_0/clk_out1] [get_bd_pins axi_asm/clk]
+connect_bd_net [get_bd_pins rst_clk_wiz_0_100M/peripheral_aresetn] [get_bd_pins axi_asm/resetn]
+apply_bd_automation -rule xilinx.com:bd_rule:axi4 -config [list     Clk_master  /clk_wiz_0/clk_out1     Clk_slave   /clk_wiz_0/clk_out1     Clk_xbar    /clk_wiz_0/clk_out1     Master      {/microblaze_0 (Periph)}     Slave       /axi_asm/S_AXI_CTRL     ddr_seg     Auto     intc_ip     /axi_smc     master_apm  0 ] [get_bd_intf_pins axi_asm/S_AXI_CTRL]
 connect_bd_intf_net [get_bd_intf_pins axi_dec/rp_intf_0] [get_bd_intf_ports rp_axi]
 assign_bd_address -quiet
 # interface-side clock/reset of the decoupler (same domain as the bus)
@@ -36,7 +44,16 @@ if {[llength [get_bd_nets -quiet -of_objects [get_bd_pins axi_dec/intf_0_arstn]]
 create_bd_port -dir O -type clk rp_aclk
 connect_bd_net [get_bd_pins clk_wiz_0/clk_out1] [get_bd_ports rp_aclk]
 create_bd_port -dir O -type rst rp_aresetn
-connect_bd_net $rstn [get_bd_ports rp_aresetn]
+# Local partition reset: flip-flops of a freshly loaded module are NOT initialized by a partial bitstream here,
+# so software pulses this after every load (while still decoupled). rp_aresetn = bus reset AND gpio bit.
+set rg [create_bd_cell -type ip -vlnv xilinx.com:ip:axi_gpio axi_gpio_rst]
+set_property -dict [list CONFIG.C_GPIO_WIDTH 1 CONFIG.C_ALL_OUTPUTS 1 CONFIG.C_DOUT_DEFAULT 0x00000001] $rg
+apply_bd_automation -rule xilinx.com:bd_rule:axi4 -config [list     Clk_master  /clk_wiz_0/clk_out1     Clk_slave   /clk_wiz_0/clk_out1     Clk_xbar    /clk_wiz_0/clk_out1     Master      {/microblaze_0 (Periph)}     Slave       /axi_gpio_rst/S_AXI     ddr_seg     Auto     intc_ip     /axi_smc     master_apm  0 ] [get_bd_intf_pins axi_gpio_rst/S_AXI]
+set rand [create_bd_cell -type ip -vlnv xilinx.com:ip:util_vector_logic rp_rst_and]
+set_property -dict [list CONFIG.C_SIZE 1 CONFIG.C_OPERATION and] $rand
+connect_bd_net $rstn [get_bd_pins rp_rst_and/Op1]
+connect_bd_net [get_bd_pins axi_gpio_rst/gpio_io_o] [get_bd_pins rp_rst_and/Op2]
+connect_bd_net [get_bd_pins rp_rst_and/Res] [get_bd_ports rp_aresetn]
 set_property CONFIG.ASSOCIATED_BUSIF rp_axi [get_bd_ports rp_aclk]
 set_property CONFIG.ASSOCIATED_RESET rp_aresetn [get_bd_ports rp_aclk]
 set_property CONFIG.FREQ_HZ 100000000 [get_bd_ports rp_aclk]
