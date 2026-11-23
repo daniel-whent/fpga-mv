@@ -5,7 +5,7 @@
  * Registers (xhwicap_l.h): WF 0x100, SZ 0x108, CR 0x10C (bit0 write, bit2 FIFO clear), SR 0x110 (bit0 done),
  * WFV 0x114 (write FIFO vacancy in words).
  *
- * UART commands: a = load RM A, b = load RM B, 0 1 2 3 = write test values, p = print din/dout/status.
+
  */
 #include <stdint.h>
 #include "xil_printf.h"
@@ -25,8 +25,16 @@
 #define CR_SW_RESET 0x8u
 #define SR_DONE 0x1u
 
-#define RP_IN   (*(volatile uint32_t *)0x40010000u)
-#define RP_OUT  (*(volatile uint32_t *)0x40010008u)
+/* Addresses from the block design address map (printed by scripts/dfx/create_bd_rp_axi.tcl). */
+#ifndef DEC_BASE
+#define DEC_BASE 0x44A00000u      /* dfx_decoupler control register block (s_axi_reg) */
+#endif
+#ifndef RP_BASE
+#define RP_BASE  0x44A10000u      /* reconfigurable partition AXI4-Lite slave (through the decoupler) */
+#endif
+#define DEC_CTRL  (*(volatile uint32_t *)(DEC_BASE + 0x0))
+#define RP_VALUE  (*(volatile uint32_t *)(RP_BASE + 0x0))
+#define RP_ID     (*(volatile uint32_t *)(RP_BASE + 0x4))
 #define UART_RX   (*(volatile uint32_t *)0x40600000u)
 #define UART_STAT (*(volatile uint32_t *)0x40600008u)
 
@@ -63,28 +71,45 @@ static int load_partial(uint32_t addr)
     return 0;
 }
 
+static uint32_t last_value = 0x12345678u;
+
 static void show(uint32_t v)
 {
-    RP_IN = v;
-    usleep(1000);
-    xil_printf("wrote 0x%08x  partition output 0x%08x\r\n", (unsigned)v, (unsigned)RP_OUT);
+    last_value = v;
+    RP_VALUE = v;
+    xil_printf("wrote 0x%08x  module id 0x%08x  value readback 0x%08x\r\n",
+               (unsigned)v, (unsigned)RP_ID, (unsigned)RP_VALUE);
+}
+
+/* Swap modules: decouple the partition, push the partial bitstream, re-couple, restore the value. */
+static void swap_to(uint32_t addr)
+{
+    DEC_CTRL = 1;
+    xil_printf("decoupler control readback 0x%08x\r\n", (unsigned)DEC_CTRL);
+    int rc = load_partial(addr);
+    DEC_CTRL = 0;
+    if (rc == 0) show(last_value);
 }
 
 int main(void)
 {
-    xil_printf("\r\n=== DFX warm-up: partial reconfiguration via HWICAP ===\r\n");
+    xil_printf("\r\n=== DFX: AXI4-Lite partition behind a DFX decoupler ===\r\n");
+    DEC_CTRL = 0;
+    xil_printf("decoupler control 0x%08x\r\n", (unsigned)DEC_CTRL);
     show(0x12345678u);
-    xil_printf("Commands: a = load RM A, b = load RM B, 0 1 2 3 = values, p = print\r\n");
+    xil_printf("Commands: a/b = swap to RM A/B (decoupled), 0 1 2 3 = values, i = id, d/e = decouple on/off\r\n");
     for (;;) {
         if (!(UART_STAT & 1u)) continue;
         switch ((char)(UART_RX & 0xFF)) {
-        case 'a': load_partial(RM_A_ADDR); show(RP_IN); break;
-        case 'b': load_partial(RM_B_ADDR); show(RP_IN); break;
+        case 'a': swap_to(RM_A_ADDR); break;
+        case 'b': swap_to(RM_B_ADDR); break;
         case '0': show(0x12345678u); break;
         case '1': show(0xDEADBEEFu); break;
         case '2': show(0x01234567u); break;
         case '3': show(0x89ABCDEFu); break;
-        case 'p': xil_printf("din 0x%08x dout 0x%08x SR=0x%08x\r\n", (unsigned)RP_IN, (unsigned)RP_OUT, (unsigned)HW(HW_SR)); break;
+        case 'i': xil_printf("module id 0x%08x\r\n", (unsigned)RP_ID); break;
+        case 'd': DEC_CTRL = 1; xil_printf("decoupled, control 0x%08x\r\n", (unsigned)DEC_CTRL); break;
+        case 'e': DEC_CTRL = 0; xil_printf("coupled, control 0x%08x\r\n", (unsigned)DEC_CTRL); break;
         default: break;
         }
     }

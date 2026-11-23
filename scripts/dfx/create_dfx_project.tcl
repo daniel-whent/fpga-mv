@@ -22,7 +22,7 @@ for {set i 1} {$i <= 3 && !$ok} {incr i} {
     } else { set ok 1 }
 }
 if {!$ok} { error "Stage 1/2 failed 3 times" }
-source $repo/scripts/dfx/create_bd_rp_gpio.tcl
+source $repo/scripts/dfx/create_bd_rp_axi.tcl
 
 add_files -norecurse $repo/dfx/rtl/seg7_strobe.v $repo/dfx/rtl/rm_a/rp.v
 update_compile_order -fileset sources_1

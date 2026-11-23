@@ -23,7 +23,28 @@ module top (
     output wire seg_dp,
     output wire [7:0] an
 );
-    wire [31:0] rp_din, rp_dout;
+    wire  rp_aclk;
+    wire [0:0] rp_aresetn;
+    wire [31:0] rp_axi_araddr;
+    wire [2:0] rp_axi_arprot;
+    wire  rp_axi_arready;
+    wire  rp_axi_arvalid;
+    wire [31:0] rp_axi_awaddr;
+    wire [2:0] rp_axi_awprot;
+    wire  rp_axi_awready;
+    wire  rp_axi_awvalid;
+    wire  rp_axi_bready;
+    wire [1:0] rp_axi_bresp;
+    wire  rp_axi_bvalid;
+    wire [31:0] rp_axi_rdata;
+    wire  rp_axi_rready;
+    wire [1:0] rp_axi_rresp;
+    wire  rp_axi_rvalid;
+    wire [31:0] rp_axi_wdata;
+    wire  rp_axi_wready;
+    wire [3:0] rp_axi_wstrb;
+    wire  rp_axi_wvalid;
+    wire [31:0] rp_value;
     system_wrapper u_system (
         .ddr2_sdram_addr(ddr2_sdram_addr),
         .ddr2_sdram_ba(ddr2_sdram_ba),
@@ -41,12 +62,54 @@ module top (
         .ddr2_sdram_we_n(ddr2_sdram_we_n),
         .led_16bits_tri_o(led_16bits_tri_o),
         .reset(reset),
-        .rp_din(rp_din),
-        .rp_dout(rp_dout),
+        .rp_aclk(rp_aclk),
+        .rp_aresetn(rp_aresetn),
+        .rp_axi_araddr(rp_axi_araddr),
+        .rp_axi_arprot(rp_axi_arprot),
+        .rp_axi_arready(rp_axi_arready),
+        .rp_axi_arvalid(rp_axi_arvalid),
+        .rp_axi_awaddr(rp_axi_awaddr),
+        .rp_axi_awprot(rp_axi_awprot),
+        .rp_axi_awready(rp_axi_awready),
+        .rp_axi_awvalid(rp_axi_awvalid),
+        .rp_axi_bready(rp_axi_bready),
+        .rp_axi_bresp(rp_axi_bresp),
+        .rp_axi_bvalid(rp_axi_bvalid),
+        .rp_axi_rdata(rp_axi_rdata),
+        .rp_axi_rready(rp_axi_rready),
+        .rp_axi_rresp(rp_axi_rresp),
+        .rp_axi_rvalid(rp_axi_rvalid),
+        .rp_axi_wdata(rp_axi_wdata),
+        .rp_axi_wready(rp_axi_wready),
+        .rp_axi_wstrb(rp_axi_wstrb),
+        .rp_axi_wvalid(rp_axi_wvalid),
         .sys_clock(sys_clock),
         .usb_uart_rxd(usb_uart_rxd),
         .usb_uart_txd(usb_uart_txd)
     );
-    rp u_rp (.din(rp_din), .dout(rp_dout));
-    seg7_strobe u_seg (.clk(sys_clock), .value(rp_dout), .seg_n(seg), .dp_n(seg_dp), .an_n(an));
+    rp u_rp (
+        .s_axi_aclk(rp_aclk),
+        .s_axi_aresetn(rp_aresetn),
+        .s_axi_araddr(rp_axi_araddr),
+        .s_axi_arprot(rp_axi_arprot),
+        .s_axi_arready(rp_axi_arready),
+        .s_axi_arvalid(rp_axi_arvalid),
+        .s_axi_awaddr(rp_axi_awaddr),
+        .s_axi_awprot(rp_axi_awprot),
+        .s_axi_awready(rp_axi_awready),
+        .s_axi_awvalid(rp_axi_awvalid),
+        .s_axi_bready(rp_axi_bready),
+        .s_axi_bresp(rp_axi_bresp),
+        .s_axi_bvalid(rp_axi_bvalid),
+        .s_axi_rdata(rp_axi_rdata),
+        .s_axi_rready(rp_axi_rready),
+        .s_axi_rresp(rp_axi_rresp),
+        .s_axi_rvalid(rp_axi_rvalid),
+        .s_axi_wdata(rp_axi_wdata),
+        .s_axi_wready(rp_axi_wready),
+        .s_axi_wstrb(rp_axi_wstrb),
+        .s_axi_wvalid(rp_axi_wvalid),
+        .value(rp_value)
+    );
+    seg7_strobe u_seg (.clk(sys_clock), .value(rp_value), .seg_n(seg), .dp_n(seg_dp), .an_n(an));
 endmodule
