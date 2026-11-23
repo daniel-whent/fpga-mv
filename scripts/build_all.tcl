@@ -7,7 +7,7 @@ set scripts_dir [file normalize [file dirname [info script]]]
 set jobs 4
 if {[info exists ::build_jobs]} { set jobs $::build_jobs }
 
-foreach stage {create_bd_stage1.tcl create_bd_stage2.tcl create_bd_stage3_vga.tcl} {
+foreach stage {create_bd_stage1.tcl create_bd_stage2.tcl create_bd_stage3_vga.tcl create_bd_stage4_usb.tcl} {
     puts "=== running $stage ==="
     if {[catch {source $scripts_dir/$stage} err]} {
         error "$stage failed: $err"
