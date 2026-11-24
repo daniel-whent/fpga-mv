@@ -52,7 +52,8 @@ datasheet; 10 Mbaud is 10 clocks/bit but whether the FTDI can generate it accura
 rate with a bit-timing diagnostic). Fast sync-FIFO mode is channel A only and not available for data on this board (unverified).
 
 ## Roadmap
-1. Verify Stage 4 on hardware; try 10/12 Mbaud.
+1. Stage 4 is verified at 4 Mbaud (known-good, 25 clocks/bit, ~2.3 s per frame); decision 2026-11-24: stay at 4 Mbaud, no
+   10/12 Mbaud work.
 2. Turn the DFX partition into an AXI-stream engine (data path + AXI-Lite control) and feed it from the frame buffer
    (AXI DMA / VDMA read side).
 3. PC prototype of the model: MobileNet-0.25-style fully-convolutional heatmap, fine-tuned, int8; MegaDetector V6 used on
