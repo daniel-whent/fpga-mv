@@ -10,6 +10,7 @@
  *   a / b   swap to RM A (grayscale) / RM B (invert), then run + verify a frame
  *   g       run one frame through the current module and verify it
  *   z       toggle the module's bypass register (stream passes through unchanged), then run + verify
+ *   t       benchmark: 10 alternating swaps, prints bitstream-load and whole-swap times in microseconds
  *   f       refill the source frame with new pseudo-random data
  *   i       print module id, control and byte counter
  *   d / e   decouple / couple the partition (diagnosis)
@@ -37,6 +38,9 @@
 #ifndef DMA_BASE
 #define DMA_BASE 0x41E00000u      /* axi_dma_rp */
 #endif
+#ifndef TIMER_BASE
+#define TIMER_BASE 0x41C00000u    /* axi_timer_0, used as a free-running 100 MHz stopwatch */
+#endif
 
 #define DEC_CTRL  (*(volatile uint32_t *)(DEC_BASE + 0x0))
 #define ASM_CTRL  (*(volatile uint32_t *)(ASM_BASE + 0x0))
@@ -46,6 +50,19 @@
 #define RP_COUNT  (*(volatile uint32_t *)(RP_BASE + 0x8))   /* input bytes seen; any write clears */
 #define UART_RX   (*(volatile uint32_t *)0x40600000u)
 #define UART_STAT (*(volatile uint32_t *)0x40600008u)
+
+/* ---- stopwatch: AXI Timer 0 counting up at 100 MHz (10 ns per tick) */
+#define TMR(off) (*(volatile uint32_t *)(TIMER_BASE + (off)))
+static void timer_init(void)
+{
+    TMR(0x00) = 0;              /* stop */
+    TMR(0x04) = 0;              /* load value 0 */
+    TMR(0x00) = 0x20;           /* LOAD0 */
+    TMR(0x00) = 0x80;           /* ENT0, count up, no interrupt */
+}
+static inline uint32_t now(void) { return TMR(0x08); }     /* ticks of 10 ns, wraps after 42.9 s */
+#define US(t) ((unsigned)((t) / 100u))
+#define US_FRAC(t) ((unsigned)(((t) % 100u)))
 
 /* ---- HWICAP (see dfx_load) */
 #define HW(off)   (*(volatile uint32_t *)(HWICAP_BASE + (off)))
@@ -94,7 +111,7 @@ static void clear_dest(void)
 }
 
 /* run one frame through the partition; returns 0 when both DMA channels finished without error */
-static int run_frame(uint32_t *ticks_100us)
+static int run_frame(uint32_t *ticks)
 {
     clear_dest();
     DMA(MM2S_CR) = 4u; DMA(S2MM_CR) = 4u;                   /* reset both channels */
@@ -105,13 +122,14 @@ static int run_frame(uint32_t *ticks_100us)
     DMA(S2MM_LEN) = FRAME_BYTES;                            /* arm the receive side first */
     DMA(MM2S_SA)  = SRC_ADDR;
     DMA(MM2S_LEN) = FRAME_BYTES;                            /* starts the transfer */
-    uint32_t t = 0;
-    while (t < 100000u && !((DMA(MM2S_SR) & 2u) && (DMA(S2MM_SR) & 2u))) { usleep(100); t++; }
-    *ticks_100us = t;
+    uint32_t t0 = now(), t = 0;
+    while (!((DMA(MM2S_SR) & 2u) && (DMA(S2MM_SR) & 2u))) { t = now() - t0; if (t > 500000000u) break; }   /* 5 s */
+    t = now() - t0;
+    *ticks = t;
     uint32_t sr_m = DMA(MM2S_SR), sr_s = DMA(S2MM_SR);
-    xil_printf("dma: mm2s sr=0x%08x s2mm sr=0x%08x, ~%u.%u ms, engine counted %u bytes\r\n",
-               (unsigned)sr_m, (unsigned)sr_s, (unsigned)(t / 10), (unsigned)(t % 10), (unsigned)RP_COUNT);
-    if (t >= 100000u) { xil_printf("TIMEOUT waiting for the DMA\r\n"); return -1; }
+    xil_printf("dma: mm2s sr=0x%08x s2mm sr=0x%08x, frame time %u us, engine counted %u bytes\r\n",
+               (unsigned)sr_m, (unsigned)sr_s, US(t), (unsigned)RP_COUNT);
+    if (t > 500000000u) { xil_printf("TIMEOUT waiting for the DMA\r\n"); return -1; }
     if ((sr_m | sr_s) & 0x70u) { xil_printf("DMA error bits set\r\n"); return -1; }
     return 0;
 }
@@ -162,7 +180,6 @@ static int load_partial(uint32_t addr)
         done_words += vac;
     }
     while (!(HW(HW_SR) & SR_DONE)) { }
-    xil_printf("loaded %u words\r\n", (unsigned)nwords);
     return 0;
 }
 
@@ -175,15 +192,41 @@ static int asm_shutdown(void)
 }
 
 /* shut down the AXI4-Lite bus, decouple (this also idles both stream interfaces), load, reset, re-couple */
-static void swap_to(uint32_t addr)
+static uint32_t last_load_ticks, last_swap_ticks;
+static int swap_to(uint32_t addr)
 {
-    if (asm_shutdown() != 0) { ASM_CTRL = 0; return; }
+    uint32_t t0 = now();
+    if (asm_shutdown() != 0) { ASM_CTRL = 0; return -1; }
     DEC_CTRL = 1;
+    uint32_t t1 = now();
     int rc = load_partial(addr);
+    uint32_t t2 = now();
     RP_RST = 0; usleep(10); RP_RST = 1; usleep(10);     /* partial bitstreams do not initialize the flip-flops */
     DEC_CTRL = 0;
     ASM_CTRL = 0;
-    if (rc == 0) xil_printf("module id 0x%08x\r\n", (unsigned)RP_ID);
+    uint32_t t3 = now();
+    last_load_ticks = t2 - t1;
+    last_swap_ticks = t3 - t0;
+    if (rc == 0) xil_printf("module id 0x%08x   swap %u us total, of which bitstream load %u us\r\n",
+                            (unsigned)RP_ID, US(last_swap_ticks), US(last_load_ticks));
+    return rc;
+}
+
+/* benchmark: 10 alternating swaps without frames; min / average / max of the bitstream load and of the whole swap */
+static void bench_swaps(void)
+{
+    uint32_t lmin = 0xFFFFFFFFu, lmax = 0, smin = 0xFFFFFFFFu, smax = 0;
+    uint64_t lsum = 0, ssum = 0;
+    for (int i = 0; i < 10; i++) {
+        if (swap_to(i % 2 == 0 ? RM_B_ADDR : RM_A_ADDR) != 0) return;
+        if (last_load_ticks < lmin) lmin = last_load_ticks;
+        if (last_load_ticks > lmax) lmax = last_load_ticks;
+        if (last_swap_ticks < smin) smin = last_swap_ticks;
+        if (last_swap_ticks > smax) smax = last_swap_ticks;
+        lsum += last_load_ticks; ssum += last_swap_ticks;
+    }
+    xil_printf("BENCH 10 swaps: bitstream load min %u avg %u max %u us; whole swap min %u avg %u max %u us\r\n",
+               US(lmin), US((uint32_t)(lsum / 10)), US(lmax), US(smin), US((uint32_t)(ssum / 10)), US(smax));
 }
 
 static void info(void)
@@ -195,6 +238,7 @@ static void info(void)
 int main(void)
 {
     xil_printf("\r\n=== DFX: streaming partition (grayscale / invert) ===\r\n");
+    timer_init();
     DEC_CTRL = 0;
     fill_source();
     info();
@@ -202,11 +246,12 @@ int main(void)
     for (;;) {
         if (!(UART_STAT & 1u)) continue;
         switch ((char)(UART_RX & 0xFF)) {
-        case 'a': swap_to(RM_A_ADDR); run_and_verify(); break;
-        case 'b': swap_to(RM_B_ADDR); run_and_verify(); break;
+        case 'a': if (swap_to(RM_A_ADDR) == 0) run_and_verify(); break;
+        case 'b': if (swap_to(RM_B_ADDR) == 0) run_and_verify(); break;
         case 'g': run_and_verify(); break;
         case 'z': RP_CTRL = RP_CTRL ^ 1u; info(); run_and_verify(); break;
         case 'f': fill_source(); break;
+        case 't': bench_swaps(); break;
         case 'i': info(); break;
         case 'd': DEC_CTRL = 1; xil_printf("decoupled\r\n"); break;
         case 'e': DEC_CTRL = 0; xil_printf("coupled\r\n"); break;

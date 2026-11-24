@@ -35,6 +35,16 @@ register map now: 0x0 control (bit0 bypass), 0x4 module id, 0x8 input byte count
 single reset pin (`s_axis_aresetn`); the decoupler stream interfaces take TKEEP from the DMA (MODE slave = static side drives);
 the DMA's data address spaces must have every peripheral segment excluded explicitly.
 
+NOT YET RUN: the AXI Timer (0x41C00000) in `create_bd_rp_stream.tcl` and the timing/benchmark code in `software/dfx_stream`
+(microsecond frame time, per-swap timing, command `t`) were added after the verified build. The project validates, but the
+bitstream with the timer was still building when this was pushed. To resume: `scripts/dfx/create_dfx_project.tcl`, then
+`setup_dfx.tcl` + `build_dfx.tcl`, `export_dfx_xsa.tcl`, `bit2words.py` (both partials), build `dfx_stream`, `load_and_run.tcl`,
+then send `t` on the UART to get the swap times and compare with the frame times.
+
+Decision 2026-11-24: ONE reconfigurable partition shared by the detector and the classifier (they replace each other in the
+same slot; never resident together). The swap time is measured by `software/dfx_stream` command `t` (AXI Timer stopwatch)
+so we know what a detector -> classifier switch costs; the engine region must be sized for the larger engine.
+
 Key facts learned (all verified on the board unless noted):
 - `v_axi4s_vid_out` does not zero `vid_data` in blanking; VGA colors must be ANDed with `vid_active_video` (Stage 3 does this).
   Without it solid colors blacked out on the monitor.

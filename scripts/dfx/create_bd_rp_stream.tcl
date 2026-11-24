@@ -91,10 +91,23 @@ connect_bd_intf_net [get_bd_intf_pins axi_dec/rp_intf_1] [get_bd_intf_ports rp_s
 connect_bd_intf_net [get_bd_intf_ports rp_m_axis] [get_bd_intf_pins axi_dec/rp_intf_2]
 set_property CONFIG.ASSOCIATED_BUSIF {rp_axi:rp_s_axis:rp_m_axis} [get_bd_ports rp_aclk]
 
+# AXI Timer used as a free-running 100 MHz microsecond-resolution stopwatch for benchmarking (swap time, frame time)
+set tmr [create_bd_cell -type ip -vlnv xilinx.com:ip:axi_timer axi_timer_0]
+apply_bd_automation -rule xilinx.com:bd_rule:axi4 -config [list \
+    Clk_master  /clk_wiz_0/clk_out1 \
+    Clk_slave   /clk_wiz_0/clk_out1 \
+    Clk_xbar    /clk_wiz_0/clk_out1 \
+    Master      {/microblaze_0 (Periph)} \
+    Slave       /axi_timer_0/S_AXI \
+    ddr_seg     Auto \
+    intc_ip     /axi_smc \
+    master_apm  0 \
+] [get_bd_intf_pins axi_timer_0/S_AXI]
+
 # the DMA's data masters only need DDR2: exclude every peripheral segment from both of its address spaces
 foreach space {axi_dma_rp/Data_MM2S axi_dma_rp/Data_S2MM} {
     foreach seg {axi_gpio_0/S_AXI/Reg axi_uartlite_0/S_AXI/Reg axi_dec/s_axi_reg/Reg rp_axi/Reg axi_asm/S_AXI_CTRL/Reg
-                 axi_hwicap_0/S_AXI_LITE/Reg axi_gpio_rst/S_AXI/Reg axi_dma_rp/S_AXI_LITE/Reg} {
+                 axi_hwicap_0/S_AXI_LITE/Reg axi_gpio_rst/S_AXI/Reg axi_dma_rp/S_AXI_LITE/Reg axi_timer_0/S_AXI/Reg} {
         catch {exclude_bd_addr_seg [get_bd_addr_segs /$seg] -target_address_space [get_bd_addr_spaces /$space]}
     }
 }
