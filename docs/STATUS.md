@@ -23,6 +23,18 @@ reconfigurable partitions (DFX) will later swap detector/classifier engines. Las
 | 3 | VGA 640x480 from DDR2 via VDMA; solid colors, bars, patterns | `create_bd_stage3_vga.tcl`, `software/vga_test` |
 | DFX warm-up | AXI4-Lite reconfigurable partition behind dfx_decoupler + dfx_axi_shutdown_manager, HWICAP loader, partition reset, 7-seg display; A<->B swaps 10/10 | `scripts/dfx/*`, `dfx/`, `software/dfx_load` |
 
+| DFX streaming | Partition with AXI4-Lite control + 8-bit AXI4-Stream in/out behind the decoupler; AXI DMA (MM2S+S2MM) moves a 640x480x3 frame DDR2 -> partition -> DDR2; RM A = grayscale, RM B = invert, bypass register; every output byte checked by the MicroBlaze; 10/10 swaps + full-frame checks | `scripts/dfx/create_bd_rp_stream.tcl`, `dfx/rtl/rm_a|rm_b/rp.v`, `dfx/sim/tb_rp_engines.v`, `software/dfx_stream` |
+
+DFX streaming details (verified 2026-11-24): frame time ~19.9 ms with grayscale (7 clocks per pixel), ~10.5 ms for invert/bypass;
+timing WNS +1.17 / +0.89 ns (config A / B), `pr_verify` compatible. Build: `scripts/dfx/create_dfx_project.tcl`, then
+`setup_dfx.tcl` + `build_dfx.tcl` (about 20 min), `export_dfx_xsa.tcl`, `dfx/tools/bit2words.py` for both partial bitstreams,
+`APP=dfx_stream XSA=C:/tmp/dfx/dfx.xsa` with `create_vitis_hello.py`, then `scripts/dfx/load_and_run.tcl` and talk to the board
+on the UART (commands: a/b swap+test, g test, z bypass, f new source, i info). This DFX project is separate from the VGA/USB
+design (no display yet); `software/dfx_load` belongs to the earlier register-only partition (commit abc8541). Partition
+register map now: 0x0 control (bit0 bypass), 0x4 module id, 0x8 input byte counter. Gotchas: the async `axis_data_fifo` has a
+single reset pin (`s_axis_aresetn`); the decoupler stream interfaces take TKEEP from the DMA (MODE slave = static side drives);
+the DMA's data address spaces must have every peripheral segment excluded explicitly.
+
 Key facts learned (all verified on the board unless noted):
 - `v_axi4s_vid_out` does not zero `vid_data` in blanking; VGA colors must be ANDed with `vid_active_video` (Stage 3 does this).
   Without it solid colors blacked out on the monitor.
@@ -56,8 +68,9 @@ Fast sync-FIFO mode is channel A only and not available for data on this board (
 
 ## Roadmap
 1. Stage 4 verified up to 12 Mbaud (0.78 s per frame). Remaining: confirm a real photo looks right on the monitor.
-2. Turn the DFX partition into an AXI-stream engine (data path + AXI-Lite control) and feed it from the frame buffer
-   (AXI DMA / VDMA read side).
+2. DONE (grayscale + invert stream engines, verified). Next: merge the streaming partition into the VGA + USB design so
+   the engine output is shown on the monitor (frame in over USB -> engine -> VGA), then a stateful engine with line
+   buffers (e.g. 3x3 Sobel edge detector) as a more realistic second module.
 3. PC prototype of the model, NO TRAINING (decision 2026-11-24): pretrained ImageNet MobileNet (0.25-width, 128x128) with
    post-training int8 quantization only; heatmap by dropping the global pooling so the 1x1 classifier gives a per-region
    score grid (sum of the animal classes = heatmap). MegaDetector is not used.

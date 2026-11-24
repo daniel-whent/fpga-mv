@@ -44,6 +44,15 @@ module top (
     wire  rp_axi_wready;
     wire [3:0] rp_axi_wstrb;
     wire  rp_axi_wvalid;
+    wire [7:0] rp_m_axis_tdata;
+    wire  rp_m_axis_tlast;
+    wire  rp_m_axis_tready;
+    wire  rp_m_axis_tvalid;
+    wire [7:0] rp_s_axis_tdata;
+    wire [0:0] rp_s_axis_tkeep;
+    wire  rp_s_axis_tlast;
+    wire  rp_s_axis_tready;
+    wire  rp_s_axis_tvalid;
     wire [31:0] rp_value;
     system_wrapper u_system (
         .ddr2_sdram_addr(ddr2_sdram_addr),
@@ -83,6 +92,15 @@ module top (
         .rp_axi_wready(rp_axi_wready),
         .rp_axi_wstrb(rp_axi_wstrb),
         .rp_axi_wvalid(rp_axi_wvalid),
+        .rp_m_axis_tdata(rp_m_axis_tdata),
+        .rp_m_axis_tlast(rp_m_axis_tlast),
+        .rp_m_axis_tready(rp_m_axis_tready),
+        .rp_m_axis_tvalid(rp_m_axis_tvalid),
+        .rp_s_axis_tdata(rp_s_axis_tdata),
+        .rp_s_axis_tkeep(rp_s_axis_tkeep),
+        .rp_s_axis_tlast(rp_s_axis_tlast),
+        .rp_s_axis_tready(rp_s_axis_tready),
+        .rp_s_axis_tvalid(rp_s_axis_tvalid),
         .sys_clock(sys_clock),
         .usb_uart_rxd(usb_uart_rxd),
         .usb_uart_txd(usb_uart_txd)
@@ -109,6 +127,15 @@ module top (
         .s_axi_wready(rp_axi_wready),
         .s_axi_wstrb(rp_axi_wstrb),
         .s_axi_wvalid(rp_axi_wvalid),
+        .m_axis_tdata(rp_m_axis_tdata),
+        .m_axis_tlast(rp_m_axis_tlast),
+        .m_axis_tready(rp_m_axis_tready),
+        .m_axis_tvalid(rp_m_axis_tvalid),
+        .s_axis_tdata(rp_s_axis_tdata),
+        .s_axis_tkeep(rp_s_axis_tkeep),
+        .s_axis_tlast(rp_s_axis_tlast),
+        .s_axis_tready(rp_s_axis_tready),
+        .s_axis_tvalid(rp_s_axis_tvalid),
         .value(rp_value)
     );
     seg7_strobe u_seg (.clk(sys_clock), .value(rp_value), .seg_n(seg), .dp_n(seg_dp), .an_n(an));

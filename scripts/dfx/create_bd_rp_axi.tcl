@@ -9,8 +9,13 @@ if {[llength [get_bd_cells -quiet axi_dec]] > 0} { puts "ERROR: already applied"
 open_bd_design [get_files ${bd_name}.bd]
 
 set sig {ARVALID {WIDTH 1 PRESENT 1} ARREADY {WIDTH 1 PRESENT 1} AWVALID {WIDTH 1 PRESENT 1} AWREADY {WIDTH 1 PRESENT 1} BVALID {WIDTH 1 PRESENT 1} BREADY {WIDTH 1 PRESENT 1} RVALID {WIDTH 1 PRESENT 1} RREADY {WIDTH 1 PRESENT 1} WVALID {WIDTH 1 PRESENT 1} WREADY {WIDTH 1 PRESENT 1} AWADDR {WIDTH 32 PRESENT 1} AWPROT {WIDTH 3 PRESENT 1} WDATA {WIDTH 32 PRESENT 1} WSTRB {WIDTH 4 PRESENT 1} BRESP {WIDTH 2 PRESENT 1} ARADDR {WIDTH 32 PRESENT 1} ARPROT {WIDTH 3 PRESENT 1} RDATA {WIDTH 32 PRESENT 1} RRESP {WIDTH 2 PRESENT 1}}
+# One decoupler for the whole partition boundary: intf_0 = AXI4-Lite control (static master -> partition),
+# intf_1 = 8-bit AXI4-Stream into the partition (with TKEEP, which the DMA always sends), intf_2 = 8-bit AXI4-Stream out of the partition.
+# (MODE is seen from the static side: slave = static logic drives it, master = the partition drives it.)
+set axs_in  {TVALID {WIDTH 1 PRESENT 1} TREADY {WIDTH 1 PRESENT 1} TDATA {WIDTH 8 PRESENT 1} TKEEP {WIDTH 1 PRESENT 1} TLAST {WIDTH 1 PRESENT 1}}
+set axs_out {TVALID {WIDTH 1 PRESENT 1} TREADY {WIDTH 1 PRESENT 1} TDATA {WIDTH 8 PRESENT 1} TLAST {WIDTH 1 PRESENT 1}}
 set dec [create_bd_cell -type ip -vlnv xilinx.com:ip:dfx_decoupler axi_dec]
-set_property CONFIG.ALL_PARAMS "HAS_SIGNAL_CONTROL 0 HAS_SIGNAL_STATUS 0 HAS_AXI_LITE 1 INTF {intf_0 {ID 0 VLNV xilinx.com:interface:aximm_rtl:1.0 MODE slave PROTOCOL AXI4LITE SIGNALS {$sig}}} ALWAYS_HAVE_AXI_CLK 1 IPI_PROP_COUNT 0" $dec
+set_property CONFIG.ALL_PARAMS "HAS_SIGNAL_CONTROL 0 HAS_SIGNAL_STATUS 0 HAS_AXI_LITE 1 INTF {intf_0 {ID 0 VLNV xilinx.com:interface:aximm_rtl:1.0 MODE slave PROTOCOL AXI4LITE SIGNALS {$sig}} intf_1 {ID 1 VLNV xilinx.com:interface:axis_rtl:1.0 MODE slave SIGNALS {$axs_in}} intf_2 {ID 2 VLNV xilinx.com:interface:axis_rtl:1.0 MODE master SIGNALS {$axs_out}}} ALWAYS_HAVE_AXI_CLK 1 IPI_PROP_COUNT 0" $dec
 
 # decoupler control register: normal AXI-Lite slave on the SmartConnect
 apply_bd_automation -rule xilinx.com:bd_rule:axi4 -config [list     Clk_master  /clk_wiz_0/clk_out1     Clk_slave   /clk_wiz_0/clk_out1     Clk_xbar    /clk_wiz_0/clk_out1     Master      {/microblaze_0 (Periph)}     Slave       /axi_dec/s_axi_reg     ddr_seg     Auto     intc_ip     /axi_smc     master_apm  0 ] [get_bd_intf_pins axi_dec/s_axi_reg]
@@ -36,9 +41,12 @@ connect_bd_intf_net [get_bd_intf_pins axi_dec/rp_intf_0] [get_bd_intf_ports rp_a
 assign_bd_address -quiet
 # interface-side clock/reset of the decoupler (same domain as the bus)
 set rstn [get_bd_pins -quiet rst_clk_wiz_0_100M/peripheral_aresetn]
-if {[llength [get_bd_nets -quiet -of_objects [get_bd_pins axi_dec/intf_0_aclk]]] == 0} { connect_bd_net [get_bd_pins clk_wiz_0/clk_out1] [get_bd_pins axi_dec/intf_0_aclk] }
 if {[llength [get_bd_nets -quiet -of_objects [get_bd_pins axi_dec/s_axi_reg_aresetn]]] == 0} { connect_bd_net $rstn [get_bd_pins axi_dec/s_axi_reg_aresetn] }
-if {[llength [get_bd_nets -quiet -of_objects [get_bd_pins axi_dec/intf_0_arstn]]] == 0} { connect_bd_net $rstn [get_bd_pins axi_dec/intf_0_arstn] }
+# interface 0 = AXI4-Lite, 1/2 = the two stream interfaces (wired up in create_bd_rp_stream.tcl)
+foreach i {0 1 2} {
+    if {[llength [get_bd_nets -quiet -of_objects [get_bd_pins axi_dec/intf_${i}_aclk]]] == 0} { connect_bd_net [get_bd_pins clk_wiz_0/clk_out1] [get_bd_pins axi_dec/intf_${i}_aclk] }
+    if {[llength [get_bd_nets -quiet -of_objects [get_bd_pins axi_dec/intf_${i}_arstn]]] == 0} { connect_bd_net $rstn [get_bd_pins axi_dec/intf_${i}_arstn] }
+}
 
 # partition side: AXI4-Lite master interface out of the BD, plus clock and reset for the partition
 create_bd_port -dir O -type clk rp_aclk

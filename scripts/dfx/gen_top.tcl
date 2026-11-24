@@ -21,10 +21,10 @@ set rpconn {}
 foreach p $ports {
     lassign $p dir range name
     lappend conn "        .${name}(${name})"
-    if {[string match rp_axi_* $name] || $name eq "rp_aclk" || $name eq "rp_aresetn"} {
+    if {[string match rp_axi_* $name] || [string match rp_s_axis_* $name] || [string match rp_m_axis_* $name] || $name eq "rp_aclk" || $name eq "rp_aresetn"} {
         # partition-facing signals stay inside the top: wire to u_rp (BD output -> RP input, and vice versa)
         lappend wires "    wire $range $name;"
-        if {$name eq "rp_aclk"} { set rpn s_axi_aclk } elseif {$name eq "rp_aresetn"} { set rpn s_axi_aresetn } else { set rpn s_axi_[string range $name 7 end] }
+        if {$name eq "rp_aclk"} { set rpn s_axi_aclk } elseif {$name eq "rp_aresetn"} { set rpn s_axi_aresetn } elseif {[string match rp_axi_* $name]} { set rpn s_axi_[string range $name 7 end] } else { set rpn [string range $name 3 end] }
         lappend rpconn "        .${rpn}(${name})"
         continue
     }
