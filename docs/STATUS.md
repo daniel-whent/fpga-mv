@@ -58,8 +58,9 @@ Fast sync-FIFO mode is channel A only and not available for data on this board (
 1. Stage 4 verified up to 12 Mbaud (0.78 s per frame). Remaining: confirm a real photo looks right on the monitor.
 2. Turn the DFX partition into an AXI-stream engine (data path + AXI-Lite control) and feed it from the frame buffer
    (AXI DMA / VDMA read side).
-3. PC prototype of the model: MobileNet-0.25-style fully-convolutional heatmap, fine-tuned, int8; MegaDetector V6 used on
-   the PC for labels/crops only (AGPL-3.0, not on the FPGA).
+3. PC prototype of the model, NO TRAINING (decision 2026-11-24): pretrained ImageNet MobileNet (0.25-width, 128x128) with
+   post-training int8 quantization only; heatmap by dropping the global pooling so the 1x1 classifier gives a per-region
+   score grid (sum of the animal classes = heatmap). MegaDetector is not used.
 4. Run a small version in the reconfigurable partition; heatmap overlay on VGA.
 
 ## Repo layout
