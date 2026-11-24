@@ -3,8 +3,10 @@
  * The VDMA keeps scanning the framebuffer out to VGA, so a frame appears on the monitor as it arrives.
  *
  * Commands on the 115200 UART (AXI UART Lite):
- *   'F' + 3 bytes (little-endian byte count)  arm the DMA for that many bytes, reply "R\n"; the PC then switches the
- *                                             port to 4 Mbaud and streams the bytes; reply "D <rx status> <dma sr>\n"
+ *   'F' + 3 bytes (little-endian byte count) + 2 bytes (little-endian bit period in 1/16 clocks, 0 = 4 Mbaud)
+ *       arm the DMA for that many bytes, reply "R\n"; the PC then switches the port to the fast rate and streams the
+ *       bytes; reply "D <rx status> <dma sr>\n"
+ *   V  compare the last frame with the byte ramp (i*7+3)&0xFF, reply "V len=.. bad=.. first=.."
  *   b  color bars    k  black    s  status
  * Addresses from the Stage 4 block design: GPIO(LED/status) 0x40000000, GPIO usb 0x40010000 (ctrl +0, status +8),
  * UART Lite 0x40600000, AXI DMA 0x41E00000, VDMA 0x44A00000, DDR2 0x80000000.
@@ -95,9 +97,20 @@ static uint8_t uart_getc(void)
     return (uint8_t)(UART_RX & 0xFF);
 }
 
-static void receive_frame(uint32_t len)
+/* compare the framebuffer against the byte ramp i & 0xFF and print the number of mismatching bytes */
+static void verify_ramp(uint32_t len)
 {
-    if (len == 0 || len > WIDTH * HEIGHT * 3u) { xil_printf("bad length %u\r\n", (unsigned)len); return; }
+    volatile uint8_t *p = (volatile uint8_t *)FB_BASE;
+    uint32_t bad = 0, first = 0xFFFFFFFFu;
+    for (uint32_t i = 0; i < len; i++)
+        if (p[i] != (uint8_t)(i * 7u + 3u)) { if (bad == 0) first = i; bad++; }
+    xil_printf("V len=%u bad=%u first=%d\r\n", (unsigned)len, (unsigned)bad, (int)first);
+}
+
+static void receive_frame(uint32_t len, uint32_t period16)
+{
+    if (len == 0 || len > 0xFFFFFu || len > WIDTH * HEIGHT * 3u) { xil_printf("bad length %u\r\n", (unsigned)len); return; }
+    if (period16 > 0x7FFu) period16 = 0;
 
     USB_CTRL = 0;                                   /* receiver disabled, flags cleared on the next enable */
     DMA(S2MM_CR) = 4u;                              /* DMA reset */
@@ -105,7 +118,7 @@ static void receive_frame(uint32_t len)
     DMA(S2MM_CR) = 1u;                              /* run */
     DMA(S2MM_DA) = FB_BASE;
     DMA(S2MM_LENGTH) = len;                         /* arms the transfer */
-    USB_CTRL = 0x80000000u | len;                   /* enable receiver for exactly len bytes */
+    USB_CTRL = 0x80000000u | (period16 << 20) | len; /* enable receiver for exactly len bytes at that bit period */
     xil_printf("R\r\n");
 
     /* wait for the DMA to finish (the PC switches baud, then streams ~len*10/4e6 s) */
@@ -114,8 +127,12 @@ static void receive_frame(uint32_t len)
     uint32_t u = USB_STATUS;
     USB_CTRL = 0;
     usleep(200000);                                 /* let the PC switch back to 115200 before we reply */
+    /* the fast stream also reaches the console UART as noise (it may even decode as commands): throw it away */
+    for (int i = 0; i < 64; i++) { while (UART_STAT & 1u) (void)UART_RX; usleep(1000); }
     xil_printf("D 0x%08x 0x%08x\r\n", (unsigned)u, (unsigned)DMA(S2MM_SR));
 }
+
+static uint32_t last_len = 0;
 
 int main(void)
 {
@@ -137,9 +154,13 @@ int main(void)
             uint32_t len = uart_getc();
             len |= (uint32_t)uart_getc() << 8;
             len |= (uint32_t)uart_getc() << 16;
-            receive_frame(len);
+            uint32_t period16 = uart_getc();
+            period16 |= (uint32_t)uart_getc() << 8;
+            last_len = len;
+            receive_frame(len, period16);
             break;
         }
+        case 'V': verify_ramp(last_len); break;
         case 'b': draw_bars();  xil_printf("done\r\n"); break;
         case 'k': fill_black(); xil_printf("done\r\n"); break;
         case 's': print_status(); break;

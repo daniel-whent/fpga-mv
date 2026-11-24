@@ -19,7 +19,7 @@ import numpy as np
 import serial
 
 W, H = 640, 480
-FAST_BAUD = 4_000_000
+FAST_BAUD = 12_000_000   # FT2232H maximum; verified error-free on the board (4/6/8/12 Mbaud all pass)
 SLOW_BAUD = 115_200
 
 
@@ -63,22 +63,27 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("image", nargs="?", help="image file (jpg/png/...)")
     ap.add_argument("--port", default="COM4")
-    ap.add_argument("--pattern", choices=["bars"], help="send a built-in test pattern instead of an image")
+    ap.add_argument("--pattern", choices=["bars", "ramp"],
+                    help="send a built-in test pattern instead of an image (ramp = integrity test, checked on the board)")
     ap.add_argument("--baud", type=int, default=FAST_BAUD)
     args = ap.parse_args()
 
-    if args.pattern == "bars":
-        rgb = pattern_bars()
-    elif args.image:
-        rgb = load_image(args.image)
+    if args.pattern == "ramp":
+        data = ((np.arange(W * H * 3, dtype=np.uint32) * 7 + 3) & 0xFF).astype(np.uint8).tobytes()
     else:
-        ap.error("give an image file or --pattern bars")
-    data = to_framebuffer_bytes(rgb)
+        if args.pattern == "bars":
+            rgb = pattern_bars()
+        elif args.image:
+            rgb = load_image(args.image)
+        else:
+            ap.error("give an image file or --pattern bars/ramp")
+        data = to_framebuffer_bytes(rgb)
     n = len(data)
+    period16 = round(100e6 * 16 / args.baud)   # receiver bit period in 1/16 clocks of the 100 MHz clock
 
     ser = serial.Serial(args.port, SLOW_BAUD, timeout=0.2, write_timeout=60)
     ser.reset_input_buffer()
-    ser.write(b"F" + n.to_bytes(3, "little"))
+    ser.write(b"F" + n.to_bytes(3, "little") + period16.to_bytes(2, "little"))
     read_until(ser, b"R\r\n", 5)
     t0 = time.time()
     ser.baudrate = args.baud
@@ -90,7 +95,11 @@ def main():
     ser.baudrate = SLOW_BAUD
     reply = read_until(ser, b"\n", 10)
     # reply is typically "D <rx status> <dma status>\n"
-    print(f"sent {n} bytes in {t1 - t0:.2f} s ({n / (t1 - t0) / 1000:.0f} kB/s); board: {reply.decode(errors='replace').strip()}")
+    print(f"{args.baud} baud: sent {n} bytes in {t1 - t0:.2f} s ({n / (t1 - t0) / 1000:.0f} kB/s); board: {reply.decode(errors='replace').strip()}")
+    if args.pattern == "ramp":
+        ser.reset_input_buffer()
+        ser.write(b"V")
+        print("  ", read_until(ser, b"\n", 10).decode(errors="replace").strip())
     ser.close()
 
 

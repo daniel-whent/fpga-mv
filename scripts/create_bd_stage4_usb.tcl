@@ -30,7 +30,6 @@ set rtl $repo_dir/usb/rtl/usb_frame_rx.v
 if {[llength [get_files -quiet usb_frame_rx.v]] == 0} { add_files -norecurse $rtl }
 update_compile_order -fileset sources_1
 create_bd_cell -type module -reference usb_frame_rx usb_rx
-set_property CONFIG.CLKS_PER_BIT 25 [get_bd_cells usb_rx]
 connect_bd_net [get_bd_pins clk_wiz_0/clk_out1] [get_bd_pins usb_rx/clk]
 connect_bd_net [get_bd_pins rst_clk_wiz_0_100M/peripheral_aresetn] [get_bd_pins usb_rx/rst_n]
 connect_bd_net [get_bd_ports usb_uart_rxd] [get_bd_pins usb_rx/rxd]

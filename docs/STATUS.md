@@ -35,7 +35,7 @@ Key facts learned (all verified on the board unless noted):
   "permission denied"; the scripts retry.
 
 ## Stage 4: USB frame input (VERIFIED on hardware 2026-11-24: 5/5 frames, 921600 bytes each, no overflow/framing errors,
-## 2.31 s per frame = 400 kB/s at 4 Mbaud; monitor check of the picture still to be confirmed by the user)
+## up to 12 Mbaud, 0.78 s per frame; monitor check of the picture still to be confirmed by the user)
 The board must delay its `D` reply until the PC has switched back to 115200 (the app now waits 200 ms); without it the reply
 was sometimes read at the wrong baud rate.
 Fast frame input over the same micro-USB cable (FTDI UART bridge) at 4 Mbaud into the DDR2 framebuffer:
@@ -47,13 +47,15 @@ A scratch build of Stages 1-4 (`scripts/create_usb_project.tcl`, run with `-tcla
 bitstream generated, WNS +1.313 ns, and `software/usb_frame` compiles against its XSA. Not run on the board. The main project
 (`fpga-ml-nexys-a7-100T`) is still at Stage 3; rebuild with `scripts/build_all.tcl` (now includes Stage 4) or the scratch script.
 Next: build, program, `python tools/send_frame.py --port COM4 --pattern bars`, then a photo; measure throughput.
-Speed notes: 4 Mbaud (25 clocks/bit at 100 MHz) ~0.4 MB/s, full frame ~2.3 s. FT2232H UART goes up to 12 Mbaud per its
-datasheet; 10 Mbaud is 10 clocks/bit but whether the FTDI can generate it accurately is unverified (plan: measure the real
-rate with a bit-timing diagnostic). Fast sync-FIFO mode is channel A only and not available for data on this board (unverified).
+Speed (verified 2026-11-24 with a 921600-byte ramp checked byte-for-byte on the board, `send_frame.py --pattern ramp`):
+4 Mbaud 2.31 s/frame (400 kB/s), 6 Mbaud 1.54 s, 8 Mbaud 1.16 s, 12 Mbaud 0.78 s (1187 kB/s) - all 0 bad bytes, 12 Mbaud is
+the FT2232H maximum and is now the default. 10 Mbaud was not tried. The receiver takes the bit period (1/16 clock units) from
+ctrl[30:20], so non-integer ratios work (12 Mbaud = 8.33 clocks); the PC sends it in the 'F' command. The fast stream also
+reaches the console UART as noise (can decode as commands), so the board flushes that FIFO before replying.
+Fast sync-FIFO mode is channel A only and not available for data on this board (unverified).
 
 ## Roadmap
-1. Stage 4 is verified at 4 Mbaud (known-good, 25 clocks/bit, ~2.3 s per frame); decision 2026-11-24: stay at 4 Mbaud, no
-   10/12 Mbaud work.
+1. Stage 4 verified up to 12 Mbaud (0.78 s per frame). Remaining: confirm a real photo looks right on the monitor.
 2. Turn the DFX partition into an AXI-stream engine (data path + AXI-Lite control) and feed it from the frame buffer
    (AXI DMA / VDMA read side).
 3. PC prototype of the model: MobileNet-0.25-style fully-convolutional heatmap, fine-tuned, int8; MegaDetector V6 used on
