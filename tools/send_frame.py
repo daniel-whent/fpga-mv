@@ -79,7 +79,7 @@ def main():
     ser = serial.Serial(args.port, SLOW_BAUD, timeout=0.2, write_timeout=60)
     ser.reset_input_buffer()
     ser.write(b"F" + n.to_bytes(3, "little"))
-    read_until(ser, b"R\n", 5)
+    read_until(ser, b"R\r\n", 5)
     t0 = time.time()
     ser.baudrate = args.baud
     time.sleep(0.01)

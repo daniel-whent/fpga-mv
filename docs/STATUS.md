@@ -34,7 +34,10 @@ Key facts learned (all verified on the board unless noted):
 - Vivado sometimes crashes at exit after a good synthesis and MIG customization fails intermittently with a transient
   "permission denied"; the scripts retry.
 
-## Stage 4: USB frame input (WRITTEN, NOT YET TESTED ON HARDWARE)
+## Stage 4: USB frame input (VERIFIED on hardware 2026-11-24: 5/5 frames, 921600 bytes each, no overflow/framing errors,
+## 2.31 s per frame = 400 kB/s at 4 Mbaud; monitor check of the picture still to be confirmed by the user)
+The board must delay its `D` reply until the PC has switched back to 115200 (the app now waits 200 ms); without it the reply
+was sometimes read at the wrong baud rate.
 Fast frame input over the same micro-USB cable (FTDI UART bridge) at 4 Mbaud into the DDR2 framebuffer:
 `usb/rtl/usb_frame_rx.v` (simulated, passes `usb/sim/tb_usb_frame_rx.v` with xsim) -> axis_data_fifo (clock crossing) ->
 AXI DMA S2MM -> DDR2 framebuffer. Block design: `scripts/create_bd_stage4_usb.tcl` (validates; GPIO ctrl/status at 0x40010000,

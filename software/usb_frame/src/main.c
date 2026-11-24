@@ -113,6 +113,7 @@ static void receive_frame(uint32_t len)
     while (!(DMA(S2MM_SR) & 0x2u) && waited < 60000u) { usleep(1000); waited++; }   /* IDLE bit */
     uint32_t u = USB_STATUS;
     USB_CTRL = 0;
+    usleep(200000);                                 /* let the PC switch back to 115200 before we reply */
     xil_printf("D 0x%08x 0x%08x\r\n", (unsigned)u, (unsigned)DMA(S2MM_SR));
 }
 
